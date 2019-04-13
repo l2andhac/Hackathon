@@ -2,6 +2,8 @@ import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -23,14 +25,16 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
-public class MapController implements ActionListener{
+public class MapController implements ActionListener, MouseListener{
 	
 	private Map<String, TreeLocation> data;
 	private JPanel top, bottom;
-	private JButton load, save, add, delete, search, findDistance;
+	private JButton viewAllTrees, save, add, delete, search, findDistance;
 	
 	private JFrame frame;
 	JLabel picLabel;
+	
+	
 	public MapController() {
 		this.data = new HashMap<String, TreeLocation>();
 		frame = new JFrame();
@@ -38,14 +42,14 @@ public class MapController implements ActionListener{
 		bottom = new JPanel();
 		frame.getContentPane().add(top, BorderLayout.NORTH);
 	    frame.getContentPane().add(bottom, BorderLayout.SOUTH);
-	    this.load = new JButton("Load");
+	    this.viewAllTrees = new JButton("View All Trees");
 	    this.save = new JButton("Save");
 	    this.add = new JButton("Add");
 	    this.delete = new JButton("Delete");
 	    this.search = new JButton("Search");
 	    this.findDistance = new JButton("Find Distance");
-	    this.load.setActionCommand("Call Load");
-	    this.load.addActionListener(this);
+	    this.viewAllTrees.setActionCommand("Call View All Trees");
+	    this.viewAllTrees.addActionListener(this);
 	    save.setActionCommand("Call Save");
 	    this.save.addActionListener(this);
 	    add.setActionCommand("Call Add");
@@ -56,12 +60,15 @@ public class MapController implements ActionListener{
 	    this.search.addActionListener(this);
 	    findDistance.setActionCommand("Call Distance");
 	    this.findDistance.addActionListener(this);
-	    bottom.add(load);
+	    bottom.add(viewAllTrees);
 	    bottom.add(save);
 	    bottom.add(add);
 	    bottom.add(delete);
 	    bottom.add(search);
 	    bottom.add(findDistance);
+	    //top.addMouseListeners(this);
+	    top.addMouseListener(this);
+	    
 	    
 		BufferedImage img = null;
 		try {
@@ -83,8 +90,24 @@ public class MapController implements ActionListener{
 	public void actionPerformed(ActionEvent event) {
 		String command = event.getActionCommand();
 	    //Creates frame with locations to move to
-	    if(command.equals("Call Load")){
-	    this.loadTrees();
+	    if(command.equals("Call View All Trees")){
+	    Set<String> allTrees = this.viewAllTrees();
+	    String[] treeNames = new String[allTrees.size()];
+		int i = 0;
+		for(String x : allTrees) {
+			treeNames[i] = x;
+			i++;
+		}
+		if(allTrees.size() == 0) {
+    		JOptionPane.showMessageDialog(null, "There are no trees to display.");
+    	}else {
+    		i = JOptionPane.showOptionDialog(null, "Choose a tree to view more information for: ", "Tree", JOptionPane.DEFAULT_OPTION,
+                JOptionPane.INFORMATION_MESSAGE, null, treeNames, treeNames[0]);
+    		TreeLocation info = this.data.get(treeNames[i]);
+    		JOptionPane.showMessageDialog(null,  treeNames[i] + ":\n Located at (" + info.getX() + "," + info.getY() + ")\n With a "
+    				+ "Status of " + info.getStatus() + "\n Description: " + info.getDescription());
+    	}
+	    
 	    }
 	    else if(command.equals("Call Save")) {
 	    	this.saveTrees();
@@ -131,6 +154,19 @@ public class MapController implements ActionListener{
 	    	JOptionPane.showMessageDialog(null, "The distance between the two points is " + x);
 	    }
 	}
+	public void mouseClicked(MouseEvent e) {
+	    int x=e.getX();
+	    int y=e.getY();
+	    String name = JOptionPane.showInputDialog("Please enter a name for the tree: ");
+	    String status = JOptionPane.showInputDialog("Please enter the status of the tree: ");
+	    String description = JOptionPane.showInputDialog("Plese enter the description for the tree: ");
+	    x = x - 630;
+	    y = y - 10;
+	    TreeLocation add = new TreeLocation(Integer.toString(x), Integer.toString(y), name, description, status);
+	    System.out.println(x);
+	    System.out.println(y);
+	    this.add(add);
+	}
 	 
 	
 	public Set<TreeLocation> search(String name) {
@@ -145,10 +181,15 @@ public class MapController implements ActionListener{
 	}
 	
 	public boolean add(TreeLocation tree) {
+		int x = Integer.parseInt(tree.getX());
+		int y = Integer.parseInt(tree.getY());
 		if(data.containsKey(tree.getName())) {
+			JOptionPane.showMessageDialog(null, "Tree must have a unique name");
 			return false;
-		}else {
+		}else if(x >= 50 && x <= 600 && y >= 20 && y <= 700){
 			data.put(tree.getName(), tree);
+			this.saveTrees();
+			this.loadTrees();
 			
 			/*BufferedImage img2 = null;
 			try {
@@ -164,11 +205,18 @@ public class MapController implements ActionListener{
 			this.displayTrees();
 			return true;
 		}
+		else {
+			JOptionPane.showMessageDialog(null, "Please enter an x between 50 and 600 and a y between 20 and 700");
+			return false;
+		}
 	}
 	
 	public boolean delete(String treeName) {
 		if(data.containsKey(treeName)){
 			data.remove(treeName);
+			this.saveTrees();
+			this.loadTrees();
+			
 			return false;
 		}else {
 			return false;
@@ -186,6 +234,21 @@ public class MapController implements ActionListener{
 
 	
 	public void loadTrees() {
+		BufferedImage img = null;
+		try {
+			img = ImageIO.read(new File("ArbMap.JPG"));
+			
+		}catch (IOException e) {
+			
+		}
+		top.removeAll();
+		picLabel = new JLabel(new ImageIcon(img));
+		picLabel.setLayout(null);
+		//frame = new JFrame();
+		top.add(picLabel);
+		top.setVisible(true);
+		frame.setVisible(true);
+		
 		
 		try {
 		File file = new File("TreeInfo.txt");
@@ -256,6 +319,37 @@ public class MapController implements ActionListener{
 	}
 	public Map<String, TreeLocation> getData() {
 		return this.data;
+	}
+	
+	public Set<String> viewAllTrees() {
+		return this.data.keySet();
+		
+		
+		
+	}
+
+	@Override
+	public void mouseEntered(MouseEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void mouseExited(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void mousePressed(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void mouseReleased(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }
